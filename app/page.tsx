@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card'
 import { InputGroup, InputGroupAddon, InputGroupTextarea } from '@/components/ui/input-group'
 import { Spinner } from '@/components/ui/spinner'
 import { randomId } from '@/lib/randomId'
+import { Github } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 type Message = {
@@ -39,7 +40,9 @@ export default function Home() {
             const response = await fetch('/api/vivChat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: [...totalMessages, { role: 'user', content: userInput }] }),
+                body: JSON.stringify({
+                    messages: [...totalMessages.slice(-7), { role: 'user', content: userInput }],
+                }),
             })
 
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
@@ -79,8 +82,12 @@ export default function Home() {
     return (
         <main className="flex h-screen flex-col gap-4 p-4">
             <div className="text-right">
-                <Button className="rounded-lg" variant="outline">
-                    Deploy Now
+                <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => window.open('https://github.com/Viskeyy/viv-chatbot', '_blank')}
+                >
+                    <Github />
                 </Button>
             </div>
 
