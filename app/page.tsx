@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { InputGroup, InputGroupAddon, InputGroupTextarea } from '@/components/ui/input-group'
 import { Spinner } from '@/components/ui/spinner'
+import { handleChunk } from '@/lib/handleChunk'
 import { randomId } from '@/lib/randomId'
+import Viv from '@yomo/viv'
 import { Github } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
@@ -16,6 +18,7 @@ type Message = {
 
 export default function Home() {
     const messagesEndRef = useRef<HTMLDivElement>(null)
+    const vivRef = useRef<Viv | null>(null)
 
     const [loading, setLoading] = useState(false)
 
@@ -24,8 +27,16 @@ export default function Home() {
         { id: randomId(), content: 'Hello!', role: 'assistant' },
     ])
 
-    const handleInputSend = async () => {
-        if (!inputValue) return
+    useEffect(() => {
+        if (vivRef.current) return
+        vivRef.current = new Viv({
+            apiKey: process.env.NEXT_PUBLIC_VIVGRID_API_KEY!,
+            baseURL: '/api',
+        })
+    }, [])
+
+    const handleStreamRequest = async () => {
+        if (!vivRef.current || !inputValue) return
 
         setLoading(true)
 
@@ -37,28 +48,17 @@ export default function Home() {
         setTotalMessages((prevMessages) => [...prevMessages, { id: aiMessageId, content: '', role: 'assistant' }])
 
         try {
-            const response = await fetch('/api/vivChat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [...totalMessages.slice(-7), { role: 'user', content: userInput }],
-                }),
+            const res = await vivRef.current.chat.completions.stream({
+                messages: [...totalMessages.slice(-7), { role: 'user', content: userInput }],
             })
 
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-
-            const reader = response.body?.getReader()
-            const decoder = new TextDecoder()
-
-            if (!reader) throw new Error('No response body')
-
-            while (true) {
-                const { done, value } = await reader.read()
-                if (done) break
-                const text = decoder.decode(value)
+            for await (const chunk of res) {
+                const chunkData = handleChunk(chunk)
 
                 setTotalMessages((prevMessages) =>
-                    prevMessages.map((msg) => (msg.id === aiMessageId ? { ...msg, content: msg.content + text } : msg)),
+                    prevMessages.map((msg) =>
+                        msg.id === aiMessageId ? { ...msg, content: msg.content + chunkData } : msg,
+                    ),
                 )
             }
         } catch (error) {
@@ -119,7 +119,7 @@ export default function Home() {
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                                 e.preventDefault()
-                                handleInputSend()
+                                handleStreamRequest()
                             }
                         }}
                         disabled={loading}
