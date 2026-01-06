@@ -1,11 +1,11 @@
 import { marked } from 'marked'
 
-marked.setOptions({
+marked.use({
     breaks: true,
     gfm: true,
 })
 
 export const MarkdownRender = ({ text }: { text: string }) => {
     const html = marked.parse(text)
-    return <div dangerouslySetInnerHTML={{ __html: html }} />
+    return <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
 }

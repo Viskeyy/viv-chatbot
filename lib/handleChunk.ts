@@ -3,13 +3,34 @@ export const handleChunk = (chunk) => {
         case 'content':
             return chunk.data
         case 'functionCall':
-            return `\n > function calling... \n [name]: ${chunk.data.name}, [arguments]: ${chunk.data.arguments} <br/>`
+            return (
+                '### 🔧 Function Call' +
+                '\n' +
+                `- **Name:** ${chunk.data?.name ?? 'unknown'}` +
+                '\n' +
+                `- **Arguments:** ${chunk.data?.arguments}` +
+                '\n --- \n'
+            )
         case 'functionCallResult':
-            return `\n > function call done: ${chunk.data.name} <br/>`
+            return (
+                '### ✅ Function Call Completed' +
+                '\n' +
+                `- **Function:** \`${chunk.data?.name ?? 'unknown'}\`` +
+                '\n --- \n'
+            )
         case 'model':
-            return `\n > model name: ${chunk.data} <br/>`
+            return '### 🧠 Model Selected' + '\n' + `- **Model:** ${chunk.data}` + '\n --- \n'
         case 'usage':
-            return `\n > usage: [total]: ${chunk.data.total_tokens}, [prompt]: ${chunk.data.prompt_tokens}, [completion]: ${chunk.data.completion_tokens} <br/>`
+            return (
+                '\n --- \n' +
+                '### 📊 Token Usage' +
+                '\n' +
+                `- **Total:** ${chunk.data?.total_tokens ?? '-'}` +
+                '\n' +
+                `- **Prompt:** ${chunk.data?.prompt_tokens ?? '-'}` +
+                '\n' +
+                `- **Completion:** ${chunk.data?.completion_tokens ?? '-'}`
+            )
         default:
             return chunk.data
     }
