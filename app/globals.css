@@ -127,3 +127,73 @@
         @apply bg-background text-foreground;
     }
 }
+
+@layer components {
+    .chunk-fold {
+        margin-top: 0.75rem;
+        border-radius: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        padding: 1rem 1.25rem;
+        color: inherit;
+    }
+
+    .chunk-fold > summary {
+        cursor: pointer;
+        list-style: none;
+        font-size: 0.7rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .chunk-fold summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .chunk-fold[open] {
+        background: rgba(255, 255, 255, 0.07);
+    }
+
+    .chunk-fold-body {
+        margin-top: 0.75rem;
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
+
+    .chunk-fold-body pre {
+        margin-top: 0.75rem;
+        padding: 0.75rem;
+        border-radius: 0.9rem;
+        background: rgba(0, 0, 0, 0.35);
+        font-size: 0.8rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .chunk-chip {
+        display: flex;
+        width: fit-content;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 0.72rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin: 0.75rem 0;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
