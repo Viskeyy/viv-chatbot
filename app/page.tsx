@@ -71,6 +71,7 @@ export default function Home() {
 
             for await (const chunk of res) {
                 const chunkData = handleChunk(chunk)
+
                 setTotalMessages((prev) =>
                     prev.map((msg) =>
                         msg.id === assistantMessageId ? { ...msg, content: msg.content + chunkData } : msg,
@@ -147,7 +148,7 @@ export default function Home() {
                                             <span>Streaming</span>
                                         </div>
                                     ) : (
-                                        <MarkdownRender className="text-sm leading-relaxed" text={message.content} />
+                                        <MarkdownRender text={message.content} />
                                     )}
                                 </div>
                             </div>

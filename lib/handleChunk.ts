@@ -9,7 +9,7 @@ const formatJSON = (value: unknown) => {
 }
 
 const renderDetails = (summary: string, body: string) =>
-    `\n\n<details class="chunk-fold">\n<summary>${summary}</summary>\n<div class="chunk-fold-body">${body}</div>\n</details>\n\n`
+    `\n\n<details class="chunk-fold">\n<summary>${summary}</summary>\n<div class="chunk-fold-body">${body}</div>\n</details>\n`
 
 export const handleChunk = (chunk: { type: string; data?: unknown }) => {
     switch (chunk.type) {
@@ -33,7 +33,7 @@ export const handleChunk = (chunk: { type: string; data?: unknown }) => {
             return (
                 '\n\n<div class="chunk-chip">' +
                 `🧠 Model Selected · <strong>${(chunk.data as string) ?? 'unknown model'}</strong>` +
-                '</div>\n\n'
+                '</div>\n'
             )
         case 'usage': {
             const data = chunk.data as {
@@ -45,7 +45,7 @@ export const handleChunk = (chunk: { type: string; data?: unknown }) => {
                 '\n\n<div class="chunk-chip">' +
                 '📊 Token Usage · ' +
                 `Total ${data?.total_tokens ?? '-'} | Prompt ${data?.prompt_tokens ?? '-'} | Completion ${data?.completion_tokens ?? '-'}` +
-                '</div>\n\n'
+                '</div>\n'
             )
         }
         default:
