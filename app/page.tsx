@@ -69,13 +69,25 @@ export default function Home() {
         try {
             const res = await vivRef.current.chat.completions.stream({ messages: payload })
 
+            const contentChunks: string[] = []
+            let modelChunk: string | null = null
+            let usageChunk: string | null = null
+
             for await (const chunk of res) {
-                const chunkData = handleChunk(chunk)
+                const chunkType = chunk.type
+
+                if (chunkType === 'model') {
+                    modelChunk = handleChunk(chunk)
+                } else if (chunkType === 'usage') {
+                    usageChunk = handleChunk(chunk)
+                } else {
+                    contentChunks.push(handleChunk(chunk))
+                }
+
+                const orderedContent = [...contentChunks, modelChunk, usageChunk].filter(Boolean).join('')
 
                 setTotalMessages((prev) =>
-                    prev.map((msg) =>
-                        msg.id === assistantMessageId ? { ...msg, content: msg.content + chunkData } : msg,
-                    ),
+                    prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, content: orderedContent } : msg)),
                 )
             }
         } catch (error) {
@@ -122,9 +134,9 @@ export default function Home() {
                 <hr className="border-white/10" />
 
                 <div className="no-scrollbar mx-auto flex w-full max-w-250 flex-auto flex-col gap-4 overflow-y-scroll">
-                    {totalMessages.map((message) => {
-                        const isAssistantStreaming =
-                            message.role === 'assistant' && loading && message.content.length === 0
+                    {totalMessages.map((message, index) => {
+                        const isLastAssistantMessage =
+                            message.role === 'assistant' && index === totalMessages.length - 1
 
                         return (
                             <div
@@ -142,13 +154,17 @@ export default function Home() {
                                             : 'border-white/10 bg-white/5 text-white/90',
                                     )}
                                 >
-                                    {isAssistantStreaming ? (
-                                        <div className="flex items-center text-xs font-semibold tracking-[0.3em] text-white/70 uppercase">
+                                    {message.content && <MarkdownRender text={message.content} />}
+                                    {loading && isLastAssistantMessage && (
+                                        <div
+                                            className={cn(
+                                                'flex items-center text-xs font-semibold tracking-[0.3em] text-white/70 uppercase',
+                                                message.content && 'mt-4',
+                                            )}
+                                        >
                                             <Spinner className="mr-2 size-4 text-white/80" />
                                             <span>Streaming</span>
                                         </div>
-                                    ) : (
-                                        <MarkdownRender text={message.content} />
                                     )}
                                 </div>
                             </div>

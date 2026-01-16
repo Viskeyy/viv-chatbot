@@ -9,7 +9,7 @@ const formatJSON = (value: unknown) => {
 }
 
 const renderDetails = (summary: string, body: string) =>
-    `\n\n<details class="chunk-fold">\n<summary>${summary}</summary>\n<div class="chunk-fold-body">${body}</div>\n</details>\n`
+    `\n\n<details class="chunk-fold">\n<summary>${summary}</summary>\n<div class="chunk-fold-body">${body}</div>\n</details>\n\n`
 
 export const handleChunk = (chunk: { type: string; data?: unknown }) => {
     switch (chunk.type) {
