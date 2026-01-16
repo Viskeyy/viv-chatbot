@@ -107,7 +107,7 @@ export default function Home() {
 
             <div className="flex w-full flex-col gap-4">
                 <div className="flex w-full items-center justify-between">
-                    <h1 className="text-2xl text-white">Viv Chatbot</h1>
+                    <h1 className="text-2xl tracking-[0.12em] text-white uppercase">Viv Chatbot</h1>
 
                     <Button
                         variant="outline"
