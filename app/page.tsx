@@ -4,7 +4,6 @@ import { MarkdownRender } from '@/components/MarkdownRender'
 import { Button } from '@/components/ui/button'
 import { InputGroup, InputGroupAddon, InputGroupTextarea } from '@/components/ui/input-group'
 import { Spinner } from '@/components/ui/spinner'
-import { handleChunk } from '@/lib/handleChunk'
 import { randomId } from '@/lib/randomId'
 import { cn } from '@/lib/utils'
 import Viv from '@yomo/viv'
@@ -69,27 +68,58 @@ export default function Home() {
         try {
             const res = await vivRef.current.chat.completions.stream({ messages: payload })
 
-            const contentChunks: string[] = []
-            let modelChunk: string | null = null
-            let usageChunk: string | null = null
+            const contentBlock: string[] = []
+            let modelBlock: string | null = null
+            let usageBlock: string | null = null
 
             for await (const chunk of res) {
-                const chunkType = chunk.type
+                const { data, type } = chunk
 
-                if (chunkType === 'model') {
-                    modelChunk = handleChunk(chunk)
-                } else if (chunkType === 'usage') {
-                    usageChunk = handleChunk(chunk)
-                } else {
-                    contentChunks.push(handleChunk(chunk))
+                switch (type) {
+                    case 'model':
+                        modelBlock = `🧠 Model Selected · ${data ?? 'unknown model'}`
+                        break
+                    case 'usage':
+                        const { total_tokens, prompt_tokens, completion_tokens } = data as any
+                        usageBlock =
+                            '📊 Token Usage · ' +
+                            `Total ${total_tokens ?? '-'} | Prompt ${prompt_tokens ?? '-'} | Completion ${completion_tokens ?? '-'}`
+                        break
+                    case 'functionCall': {
+                        const { name, arguments: args } = data as any
+                        contentBlock.push(
+                            `<FunctionSheet name='🔧 Function Call — ${name}' detail='${args}'></FunctionSheet>\n\n`,
+                        )
+                        break
+                    }
+                    case 'functionCallResult': {
+                        const { name, result: res } = data as any
+                        contentBlock.push(
+                            `<FunctionSheet name='✅ Function Result — ${name}' detail='${res}'></FunctionSheet>\n\n`,
+                        )
+                        break
+                    }
+                    case 'content':
+                        contentBlock.push(data as any)
+                        break
+                    default:
+                        break
                 }
 
-                const orderedContent = [...contentChunks, modelChunk, usageChunk].filter(Boolean).join('')
+                const orderedBlocks = contentBlock.filter(Boolean).join('')
 
                 setTotalMessages((prev) =>
-                    prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, content: orderedContent } : msg)),
+                    prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, content: orderedBlocks } : msg)),
                 )
             }
+
+            const finalBlocks = [...contentBlock, `\n\n<ModelInfo model='${modelBlock}' usage='${usageBlock}' />`]
+                .filter(Boolean)
+                .join('')
+
+            setTotalMessages((prev) =>
+                prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, content: finalBlocks } : msg)),
+            )
         } catch (error) {
             setTotalMessages((prev) => [
                 ...prev,
@@ -111,27 +141,21 @@ export default function Home() {
     const isInputEmpty = inputValue.trim().length === 0
 
     return (
-        <main className="text-foreground flex h-screen w-screen bg-[#020510] p-8">
-            <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(95,111,255,0.16),transparent_55%)] opacity-70"
-            />
-
+        <main className="text-foreground flex h-screen w-screen bg-[#fafafa] p-8">
             <div className="flex w-full flex-col gap-4">
                 <div className="flex w-full items-center justify-between">
-                    <h1 className="text-2xl tracking-[0.12em] text-white uppercase">Viv Chatbot</h1>
+                    <h1 className="text-xl tracking-widest uppercase">Viv Chatbot</h1>
 
                     <Button
                         variant="outline"
                         size="icon"
-                        className="bg-white/5 text-white/80 hover:bg-white/10"
                         onClick={() => window.open('https://github.com/Viskeyy/viv-chatbot', '_blank')}
                     >
                         <Github />
                     </Button>
                 </div>
 
-                <hr className="border-white/10" />
+                <hr />
 
                 <div className="no-scrollbar mx-auto flex w-full max-w-250 flex-auto flex-col gap-4 overflow-y-scroll">
                     {totalMessages.map((message, index) => {
@@ -141,28 +165,25 @@ export default function Home() {
                         return (
                             <div
                                 key={message.id}
-                                className={cn(
-                                    'gap-4 text-white/90',
-                                    message.role === 'user' ? 'self-end' : 'self-start',
-                                )}
+                                className={cn('gap-2', message.role === 'user' ? 'self-end' : 'self-start')}
                             >
                                 <div
                                     className={cn(
-                                        'rounded-2xl border p-4 text-sm text-pretty shadow-[0_25px_65px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-colors duration-300',
+                                        'text-sm text-pretty backdrop-blur-xl transition-colors duration-300',
                                         message.role === 'user'
-                                            ? 'border-indigo-400/40 bg-linear-to-l from-indigo-500/40 via-purple-500/30 to-sky-500/20 text-white'
-                                            : 'border-white/10 bg-white/5 text-white/90',
+                                            ? 'rounded-md border bg-white p-4 leading-none'
+                                            : 'w-full max-w-full',
                                     )}
                                 >
                                     {message.content && <MarkdownRender text={message.content} />}
                                     {loading && isLastAssistantMessage && (
                                         <div
                                             className={cn(
-                                                'flex items-center text-xs font-semibold tracking-[0.3em] text-white/70 uppercase',
+                                                'flex items-center text-xs font-semibold tracking-widest uppercase',
                                                 message.content && 'mt-4',
                                             )}
                                         >
-                                            <Spinner className="mr-2 size-4 text-white/80" />
+                                            <Spinner className="mr-2 size-4" />
                                             <span>Streaming</span>
                                         </div>
                                     )}
@@ -173,78 +194,10 @@ export default function Home() {
                     <div ref={messagesEndRef} />
                 </div>
 
-                {/*<div className="no-scrollbar mx-auto w-full max-w-250 flex-auto overflow-y-scroll">
-                    {totalMessages.map((message) => {
-                        const label = message.role === 'user' ? 'You' : 'Viv Assistant'
-                        const isAssistantStreaming =
-                            message.role === 'assistant' && loading && message.content.length === 0
-
-                        return (
-                            <div
-                                key={message.id}
-                                className={cn(
-                                    'group/message flex w-full items-start gap-4 text-white/90',
-                                    message.role === 'user' ? 'justify-end' : 'justify-start',
-                                )}
-                            >
-                                {message.role === 'assistant' && (
-                                    <div className="ring-border flex size-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/80 ring-1">
-                                        <Sparkles className="size-4 text-white/80" />
-                                    </div>
-                                )}
-
-                                <div className="flex flex-col gap-4">
-                                    <div
-                                        className={cn(
-                                            'flex flex-wrap items-center gap-4 text-[0.65rem] font-semibold tracking-[0.35em] uppercase',
-                                            message.role === 'user' ? 'text-white/70' : 'text-white/60',
-                                        )}
-                                    >
-                                        <span>{label}</span>
-                                    </div>
-                                    <div
-                                        className={cn(
-                                            'rounded-2xl border p-4 text-sm text-pretty shadow-[0_25px_65px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-colors duration-300',
-                                            message.role === 'user'
-                                                ? 'border-indigo-400/40 bg-linear-to-l from-indigo-500/40 via-purple-500/30 to-sky-500/20 text-white'
-                                                : 'border-white/10 bg-white/5 text-white/90',
-                                        )}
-                                    >
-                                        {isAssistantStreaming ? (
-                                            <div className="flex items-center text-xs font-semibold tracking-[0.3em] text-white/70 uppercase">
-                                                <Spinner className="mr-2 size-4 text-white/80" />
-                                                <span>Streaming</span>
-                                            </div>
-                                        ) : (
-                                            <MarkdownRender
-                                                className="text-sm leading-relaxed"
-                                                text={message.content}
-                                            />
-                                        )}
-                                    </div>
-                                </div>
-
-                                {message.role === 'user' && (
-                                    <div
-                                        className={cn(
-                                            'ring-border flex size-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-indigo-500/60 via-purple-500/60 to-sky-500/60 text-white ring-1',
-                                        )}
-                                    >
-                                        <span className="text-[0.55rem] font-semibold tracking-wide uppercase">
-                                            You
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                        )
-                    })}
-                    <div ref={messagesEndRef} />
-                </div>*/}
-
-                <InputGroup className="mx-auto w-full max-w-250 rounded-2xl border-white/10 bg-white/5 p-2 text-white backdrop-blur-2xl transition-all focus-within:border-white/20">
+                <InputGroup className="mx-auto w-full max-w-250 rounded-md bg-white p-2 backdrop-blur-2xl transition-all">
                     <InputGroupTextarea
                         placeholder="Send a message..."
-                        className="h-16 flex-auto resize-none bg-transparent text-base leading-relaxed text-white placeholder:text-white/40 focus:outline-none"
+                        className="h-16 bg-transparent text-base leading-relaxed"
                         onChange={(e) => setInputValue(e.target.value)}
                         value={inputValue}
                         onKeyDown={(e) => {
@@ -257,17 +210,18 @@ export default function Home() {
                     />
                     <InputGroupAddon align="inline-end" className="h-8 gap-4 pr-4">
                         {loading && (
-                            <div className="flex items-center text-[0.65rem] font-semibold tracking-[0.3em] text-white/60 uppercase">
-                                <Spinner className="mr-2 size-4 text-white/70" />
+                            <div className="flex items-center rounded-md text-xs font-semibold tracking-widest uppercase">
+                                <Spinner className="mr-2 size-4" />
                                 <span>Live</span>
                             </div>
                         )}
                         <Button
                             type="button"
                             size="sm"
-                            className="rounded-full bg-white p-4 text-xs font-bold tracking-[0.2em] text-black uppercase transition-transform hover:bg-white/90 active:scale-95"
+                            className="rounded-md p-4 text-xs tracking-widest uppercase transition-transform"
                             onClick={handleStreamRequest}
                             disabled={loading || isInputEmpty}
+                            variant="default"
                         >
                             <Send className="mr-2 size-4" />
                             Send
