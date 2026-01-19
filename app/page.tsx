@@ -22,9 +22,7 @@ export default function Home() {
 
     const [loading, setLoading] = useState(false)
     const [inputValue, setInputValue] = useState('')
-    const [totalMessages, setTotalMessages] = useState<ChatMessage[]>([
-        { id: randomId(), content: 'Hello!', role: 'assistant' },
-    ])
+    const [totalMessages, setTotalMessages] = useState<ChatMessage[]>([])
 
     useEffect(() => {
         if (vivRef.current) return
@@ -157,6 +155,9 @@ export default function Home() {
                 <hr />
 
                 <div className="no-scrollbar mx-auto flex w-full max-w-250 flex-auto flex-col gap-4 overflow-y-scroll p-2">
+                    {totalMessages.length === 0 && (
+                        <div className="flex h-full w-full items-center justify-center text-9xl">Hello!</div>
+                    )}
                     {totalMessages.map((message, index) => {
                         const isLastAssistantMessage =
                             message.role === 'assistant' && index === totalMessages.length - 1
