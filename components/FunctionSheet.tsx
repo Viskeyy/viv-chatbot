@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 export const FunctionSheet = ({ name, detail }: { name: string; detail: string }) => {
     return (
         <Sheet>
-            <SheetTrigger className="w-full cursor-pointer rounded-md border border-emerald-100 bg-emerald-50 p-4 text-left text-sm leading-none">
+            <SheetTrigger className="cursor-pointer rounded-full border border-emerald-100 bg-emerald-50 p-4 text-left text-sm leading-none">
                 <div>{name}</div>
             </SheetTrigger>
 

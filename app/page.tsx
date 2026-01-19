@@ -145,7 +145,6 @@ export default function Home() {
             <div className="flex w-full flex-col gap-4">
                 <div className="flex w-full items-center justify-between">
                     <h1 className="text-xl tracking-widest uppercase">Viv Chatbot</h1>
-
                     <Button
                         variant="outline"
                         size="icon"
@@ -157,7 +156,7 @@ export default function Home() {
 
                 <hr />
 
-                <div className="no-scrollbar mx-auto flex w-full max-w-250 flex-auto flex-col gap-4 overflow-y-scroll">
+                <div className="no-scrollbar mx-auto flex w-full max-w-250 flex-auto flex-col gap-4 overflow-y-scroll p-2">
                     {totalMessages.map((message, index) => {
                         const isLastAssistantMessage =
                             message.role === 'assistant' && index === totalMessages.length - 1
@@ -169,9 +168,9 @@ export default function Home() {
                             >
                                 <div
                                     className={cn(
-                                        'text-sm text-pretty backdrop-blur-xl transition-colors duration-300',
+                                        'text-sm text-pretty backdrop-blur-xl',
                                         message.role === 'user'
-                                            ? 'rounded-md border bg-white p-4 leading-none'
+                                            ? 'rounded-md bg-white px-4 py-2 leading-none shadow'
                                             : 'w-full max-w-full',
                                     )}
                                 >
@@ -203,25 +202,18 @@ export default function Home() {
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                                 e.preventDefault()
-                                void handleStreamRequest()
+                                handleStreamRequest()
                             }
                         }}
                         disabled={loading}
                     />
-                    <InputGroupAddon align="inline-end" className="h-8 gap-4 pr-4">
-                        {loading && (
-                            <div className="flex items-center rounded-md text-xs font-semibold tracking-widest uppercase">
-                                <Spinner className="mr-2 size-4" />
-                                <span>Live</span>
-                            </div>
-                        )}
+                    <InputGroupAddon align="inline-end">
                         <Button
                             type="button"
                             size="sm"
-                            className="rounded-md p-4 text-xs tracking-widest uppercase transition-transform"
+                            className="h-12 w-24 rounded-md text-xs tracking-widest uppercase transition-transform"
                             onClick={handleStreamRequest}
                             disabled={loading || isInputEmpty}
-                            variant="default"
                         >
                             <Send className="mr-2 size-4" />
                             Send
