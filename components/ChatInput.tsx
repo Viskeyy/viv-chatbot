@@ -1,0 +1,64 @@
+'use client'
+
+import { Button } from '@/components/ui/button'
+import { InputGroup, InputGroupAddon } from '@/components/ui/input-group'
+import { Textarea } from '@/components/ui/textarea'
+import { CornerDownLeft } from 'lucide-react'
+import { useEffect, useRef } from 'react'
+
+type ChatInputProps = {
+    value: string
+    loading: boolean
+    onValueChange: (value: string) => void
+    onSubmit: () => void
+}
+
+export const ChatInput = ({ value, loading, onValueChange, onSubmit }: ChatInputProps) => {
+    const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+    useEffect(() => {
+        textareaRef.current?.focus()
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if ((event.metaKey || event.ctrlKey) && event.key === 'i') {
+                event.preventDefault()
+                textareaRef.current?.focus()
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [])
+
+    const isInputEmpty = value.trim().length === 0
+
+    return (
+        <InputGroup className="mx-auto w-full max-w-250 rounded-md bg-white p-2 backdrop-blur-2xl transition-all">
+            <Textarea
+                ref={textareaRef}
+                placeholder="Command/Ctrl + I to focus, Return/Enter to send a message..."
+                className="h-16 resize-none border-0 bg-transparent text-base leading-relaxed shadow-none focus-visible:ring-0"
+                onChange={(event) => onValueChange(event.target.value)}
+                value={value}
+                onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                        event.preventDefault()
+                        onSubmit()
+                    }
+                }}
+                disabled={loading}
+            />
+            <InputGroupAddon align="inline-end">
+                <Button
+                    type="button"
+                    size="sm"
+                    className="h-12 w-24 rounded-md text-xs tracking-widest uppercase transition-transform"
+                    onClick={onSubmit}
+                    disabled={loading || isInputEmpty}
+                >
+                    Send <CornerDownLeft className="size-4" />
+                </Button>
+            </InputGroupAddon>
+        </InputGroup>
+    )
+}
