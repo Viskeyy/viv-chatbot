@@ -2,12 +2,13 @@
 
 import { MarkdownRender } from '@/components/MarkdownRender'
 import { Button } from '@/components/ui/button'
-import { InputGroup, InputGroupAddon, InputGroupTextarea } from '@/components/ui/input-group'
+import { InputGroup, InputGroupAddon } from '@/components/ui/input-group'
 import { Spinner } from '@/components/ui/spinner'
+import { Textarea } from '@/components/ui/textarea'
 import { randomId } from '@/lib/randomId'
 import { cn } from '@/lib/utils'
 import Viv from '@yomo/viv'
-import { Github, Send } from 'lucide-react'
+import { CornerDownLeft, Github } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 type ChatMessage = {
@@ -19,6 +20,7 @@ type ChatMessage = {
 export default function Home() {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const vivRef = useRef<Viv | null>(null)
+    const textareaRef = useRef<HTMLTextAreaElement>(null)
 
     const [loading, setLoading] = useState(false)
     const [inputValue, setInputValue] = useState('')
@@ -67,6 +69,7 @@ export default function Home() {
             const res = await vivRef.current.chat.completions.stream({ messages: payload })
 
             const contentBlock: string[] = []
+            const toolsBlock: string[] = ["<div className='flex w-full flex-wrap items-center gap-4'>", '</div>\n\n']
             let modelBlock: string | null = null
             let usageBlock: string | null = null
 
@@ -85,15 +88,19 @@ export default function Home() {
                         break
                     case 'functionCall': {
                         const { name, arguments: args } = data as any
-                        contentBlock.push(
-                            `<FunctionSheet name='🔧 Function Call — ${name}' detail='${args}'></FunctionSheet>\n\n`,
+                        toolsBlock.splice(
+                            toolsBlock.length - 1,
+                            0,
+                            `<FunctionSheet name='🔧 Function Call — ${name}' detail='${args}'></FunctionSheet>`,
                         )
                         break
                     }
                     case 'functionCallResult': {
                         const { name, result: res } = data as any
-                        contentBlock.push(
-                            `<FunctionSheet name='✅ Function Result — ${name}' detail='${res}'></FunctionSheet>\n\n`,
+                        toolsBlock.splice(
+                            toolsBlock.length - 1,
+                            0,
+                            `<FunctionSheet name='✅ Function Result — ${name}' detail='${res}'></FunctionSheet>`,
                         )
                         break
                     }
@@ -104,14 +111,21 @@ export default function Home() {
                         break
                 }
 
-                const orderedBlocks = contentBlock.filter(Boolean).join('')
+                const toolsHtml = toolsBlock.length > 2 ? toolsBlock.join('') : ''
+                const orderedBlocks = [toolsHtml, ...contentBlock].filter(Boolean).join('')
 
                 setTotalMessages((prev) =>
                     prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, content: orderedBlocks } : msg)),
                 )
             }
 
-            const finalBlocks = [...contentBlock, `\n\n<ModelInfo model='${modelBlock}' usage='${usageBlock}' />`]
+            const toolsHtml = toolsBlock.length > 2 ? toolsBlock.join('') : ''
+
+            const finalBlocks = [
+                toolsHtml,
+                ...contentBlock,
+                `\n\n<ModelInfo model='${modelBlock}' usage='${usageBlock}' />`,
+            ]
                 .filter(Boolean)
                 .join('')
 
@@ -135,6 +149,20 @@ export default function Home() {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [totalMessages])
+
+    useEffect(() => {
+        textareaRef.current?.focus()
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'i') {
+                e.preventDefault()
+                textareaRef.current?.focus()
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [])
 
     const isInputEmpty = inputValue.trim().length === 0
 
@@ -195,12 +223,13 @@ export default function Home() {
                 </div>
 
                 <InputGroup className="mx-auto w-full max-w-250 rounded-md bg-white p-2 backdrop-blur-2xl transition-all">
-                    <InputGroupTextarea
-                        placeholder="Send a message..."
-                        className="h-16 bg-transparent text-base leading-relaxed"
-                        onChange={(e) => setInputValue(e.target.value)}
+                    <Textarea
+                        ref={textareaRef}
+                        placeholder="Command/Ctrl + I to focus, Return/Enter to send a message..."
+                        className="h-16 resize-none border-0 bg-transparent text-base leading-relaxed shadow-none focus-visible:ring-0"
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInputValue(e.target.value)}
                         value={inputValue}
-                        onKeyDown={(e) => {
+                        onKeyDown={(e: React.KeyboardEvent) => {
                             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                                 e.preventDefault()
                                 handleStreamRequest()
@@ -216,8 +245,7 @@ export default function Home() {
                             onClick={handleStreamRequest}
                             disabled={loading || isInputEmpty}
                         >
-                            <Send className="mr-2 size-4" />
-                            Send
+                            Send <CornerDownLeft className="size-4" />
                         </Button>
                     </InputGroupAddon>
                 </InputGroup>
