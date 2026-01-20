@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { randomId } from '@/lib/randomId'
 import { cn } from '@/lib/utils'
 import Viv from '@yomo/viv'
-import { CornerDownLeft, Github } from 'lucide-react'
+import { Copy, CornerDownLeft, Github, RefreshCcw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 type ChatMessage = {
@@ -34,13 +34,14 @@ export default function Home() {
         })
     }, [])
 
-    const handleStreamRequest = async () => {
+    const handleStreamRequest = async (overrideContent?: string) => {
         if (!vivRef.current) return
-        const trimmedInput = inputValue.trim()
+        const input = overrideContent ?? inputValue
+        const trimmedInput = input.trim()
         if (!trimmedInput) return
 
         setLoading(true)
-        setInputValue('')
+        if (!overrideContent) setInputValue('')
 
         const userMessage: ChatMessage = {
             id: randomId(),
@@ -203,7 +204,32 @@ export default function Home() {
                                             : 'w-full max-w-full',
                                     )}
                                 >
-                                    {message.content && <MarkdownRender text={message.content} />}
+                                    {message.content && message.role === 'user' ? (
+                                        <div className="flex items-center gap-2">
+                                            <MarkdownRender text={message.content} />
+                                            <div title="copy">
+                                                <Copy
+                                                    className="size-4 cursor-pointer opacity-50 transition-opacity hover:opacity-100"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(message.content)
+                                                    }}
+                                                />
+                                            </div>
+                                            <div title="retry">
+                                                <RefreshCcw
+                                                    className={cn(
+                                                        'size-4 transition-all',
+                                                        loading
+                                                            ? 'cursor-not-allowed opacity-20'
+                                                            : 'cursor-pointer opacity-50 hover:rotate-180 hover:opacity-100',
+                                                    )}
+                                                    onClick={() => !loading && handleStreamRequest(message.content)}
+                                                />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <MarkdownRender text={message.content} />
+                                    )}
                                     {loading && isLastAssistantMessage && (
                                         <div
                                             className={cn(
@@ -242,7 +268,7 @@ export default function Home() {
                             type="button"
                             size="sm"
                             className="h-12 w-24 rounded-md text-xs tracking-widest uppercase transition-transform"
-                            onClick={handleStreamRequest}
+                            onClick={() => handleStreamRequest()}
                             disabled={loading || isInputEmpty}
                         >
                             Send <CornerDownLeft className="size-4" />
