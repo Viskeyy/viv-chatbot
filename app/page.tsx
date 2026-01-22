@@ -6,10 +6,10 @@ import { ChatMessages, type ChatMessage } from '@/components/ChatMessages'
 import { randomId } from '@/lib/randomId'
 import { applyStreamChunk } from '@/lib/streamChunk'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
-export default function Home() {
+function ChatContent() {
     const searchParams = useSearchParams()
     const [loading, setLoading] = useState(false)
     const [inputValue, setInputValue] = useState('')
@@ -168,5 +168,25 @@ export default function Home() {
                 />
             </div>
         </main>
+    )
+}
+
+function LoadingFallback() {
+    return (
+        <main className="text-foreground flex h-screen w-screen bg-[#fafafa] p-8">
+            <div className="flex w-full flex-col gap-4">
+                <ChatHeader />
+                <hr />
+                <div className="flex items-center justify-center">Loading...</div>
+            </div>
+        </main>
+    )
+}
+
+export default function Home() {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <ChatContent />
+        </Suspense>
     )
 }
