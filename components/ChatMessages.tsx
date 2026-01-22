@@ -5,6 +5,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { Copy, RefreshCcw } from 'lucide-react'
 import { useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 
 export type ChatMessage = {
     id: string
@@ -51,6 +52,7 @@ export const ChatMessages = ({ totalMessages, loading, onRequest }: ChatMessages
                                             className="size-4 cursor-pointer opacity-50 transition-opacity hover:opacity-100"
                                             onClick={() => {
                                                 navigator.clipboard.writeText(message.content)
+                                                toast.success('Copied!', { position: 'top-center' })
                                             }}
                                         />
                                     </div>

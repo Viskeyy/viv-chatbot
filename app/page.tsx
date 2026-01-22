@@ -5,31 +5,36 @@ import { ChatInput } from '@/components/ChatInput'
 import { ChatMessages, type ChatMessage } from '@/components/ChatMessages'
 import { randomId } from '@/lib/randomId'
 import { applyStreamChunk } from '@/lib/streamChunk'
-import Viv from '@yomo/viv'
-import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 export default function Home() {
-    const vivRef = useRef<Viv | null>(null)
+    const searchParams = useSearchParams()
     const [loading, setLoading] = useState(false)
     const [inputValue, setInputValue] = useState('')
     const [totalMessages, setTotalMessages] = useState<ChatMessage[]>([])
+    const [encryptedKey, setEncryptedKey] = useState<string | null>(null)
 
     useEffect(() => {
-        if (vivRef.current) return
-        vivRef.current = new Viv({
-            apiKey: process.env.NEXT_PUBLIC_VIVGRID_API_KEY!,
-            baseURL: '/api',
-        })
-    }, [])
+        const encrypteKeyParam = searchParams.get('apiKey')
+        if (encrypteKeyParam) {
+            const decoded = decodeURIComponent(encrypteKeyParam)
+            setEncryptedKey(decoded)
+        }
+    }, [searchParams])
 
     const handleStreamRequest = async (overrideContent?: string) => {
-        if (!vivRef.current) return
-        const input = overrideContent ?? inputValue
-        const trimmedInput = input.trim()
-        if (!trimmedInput) return
+        const content = typeof overrideContent === 'string' ? overrideContent : undefined
+        const trimmedInput = (content ?? inputValue).trim()
+
+        if (!trimmedInput) {
+            toast.error('Please enter a message', { position: 'top-center' })
+            return
+        }
 
         setLoading(true)
-        if (!overrideContent) setInputValue('')
+        if (!content) setInputValue('')
 
         const userMessage: ChatMessage = {
             id: randomId(),
@@ -45,17 +50,39 @@ export default function Home() {
         }
 
         const payload = [
-            ...(totalMessages.slice(-7).map(({ role, content }) => ({ role, content })) as Array<{
-                role: 'user' | 'assistant'
-                content: string
-            }>),
+            ...totalMessages.slice(-7).map(({ role, content }) => ({ role, content })),
             { role: 'user' as const, content: trimmedInput },
         ]
 
         setTotalMessages((prev) => [...prev, userMessage, assistantPlaceholder])
 
         try {
-            const res = await vivRef.current.chat.completions.stream({ messages: payload })
+            const requestBody: {
+                messages: Array<{ role: 'user' | 'assistant'; content: string }>
+                encryptedKey?: string
+            } = {
+                messages: payload,
+            }
+            if (encryptedKey) requestBody.encryptedKey = encryptedKey
+
+            const response = await fetch('/api/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
+            })
+
+            if (!response.ok) {
+                const errorText = await response.text()
+                const errorMessage =
+                    JSON.parse(errorText)?.error || errorText || `HTTP error! status: ${response.status}`
+                toast.error(errorMessage, { position: 'top-center' })
+                throw new Error(errorMessage)
+            }
+
+            const reader = response.body?.getReader()
+            if (!reader) throw new Error('No reader available')
 
             const streamState = {
                 contentBlock: [],
@@ -64,15 +91,35 @@ export default function Home() {
                 usageBlock: null,
             }
 
-            for await (const chunk of res) {
-                applyStreamChunk(chunk, streamState)
+            const decoder = new TextDecoder()
+            let buffer = ''
 
-                const toolsHtml = streamState.toolsBlock.length > 2 ? streamState.toolsBlock.join('') : ''
-                const orderedBlocks = [toolsHtml, ...streamState.contentBlock].filter(Boolean).join('')
+            while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
 
-                setTotalMessages((prev) =>
-                    prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, content: orderedBlocks } : msg)),
-                )
+                buffer += decoder.decode(value, { stream: true })
+                const lines = buffer.split('\n')
+                buffer = lines.pop() || ''
+
+                for (const line of lines) {
+                    if (!line.trim()) continue
+                    try {
+                        const chunk = JSON.parse(line)
+                        applyStreamChunk(chunk, streamState)
+
+                        const toolsHtml = streamState.toolsBlock.length > 2 ? streamState.toolsBlock.join('') : ''
+                        const orderedBlocks = [toolsHtml, ...streamState.contentBlock].filter(Boolean).join('')
+
+                        setTotalMessages((prev) =>
+                            prev.map((msg) =>
+                                msg.id === assistantMessageId ? { ...msg, content: orderedBlocks } : msg,
+                            ),
+                        )
+                    } catch (e) {
+                        console.error('Error parsing chunk:', e, line)
+                    }
+                }
             }
 
             const toolsHtml = streamState.toolsBlock.length > 2 ? streamState.toolsBlock.join('') : ''
@@ -90,7 +137,7 @@ export default function Home() {
             )
         } catch (error) {
             setTotalMessages((prev) => [
-                ...prev,
+                ...prev.filter((msg) => msg.id !== assistantMessageId),
                 {
                     id: randomId(),
                     content: `Error: ${error instanceof Error ? error.message : 'Failed to get response'}`,
