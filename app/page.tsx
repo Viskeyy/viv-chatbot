@@ -21,6 +21,8 @@ export default function Home() {
         if (encrypteKeyParam) {
             const decoded = decodeURIComponent(encrypteKeyParam)
             setEncryptedKey(decoded)
+        } else {
+            toast.error('API key not found', { position: 'top-center' })
         }
     }, [searchParams])
 
