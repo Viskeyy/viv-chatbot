@@ -1,9 +1,18 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog'
 import { InputGroup, InputGroupAddon } from '@/components/ui/input-group'
 import { Textarea } from '@/components/ui/textarea'
-import { CornerDownLeft } from 'lucide-react'
+import { CornerDownLeft, X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 
 type ChatInputProps = {
@@ -11,9 +20,11 @@ type ChatInputProps = {
     loading: boolean
     onValueChange: (value: string) => void
     onSubmit: () => void
+    onClear: () => void
+    isDisabledClear: boolean
 }
 
-export const ChatInput = ({ value, loading, onValueChange, onSubmit }: ChatInputProps) => {
+export const ChatInput = ({ value, loading, onValueChange, onSubmit, onClear, isDisabledClear }: ChatInputProps) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null)
 
     useEffect(() => {
@@ -49,11 +60,46 @@ export const ChatInput = ({ value, loading, onValueChange, onSubmit }: ChatInput
                 disabled={loading}
             />
             <InputGroupAddon align="inline-end">
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button
+                            type="button"
+                            size="sm"
+                            className="h-12 w-24 rounded-md text-xs tracking-widest uppercase transition-transform"
+                            disabled={loading || isDisabledClear}
+                            variant="ghost"
+                        >
+                            clear <X className="size-4" />
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-100">
+                        <DialogTitle className="tracking-widest uppercase">Clear</DialogTitle>
+                        <DialogDescription>Clear All Messages?</DialogDescription>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button
+                                    variant="outline"
+                                    className="rounded-md text-xs tracking-widest uppercase transition-transform"
+                                >
+                                    Cancel
+                                </Button>
+                            </DialogClose>
+                            <DialogClose asChild>
+                                <Button
+                                    onClick={onClear}
+                                    className="rounded-md text-xs tracking-widest uppercase transition-transform"
+                                >
+                                    Clear
+                                </Button>
+                            </DialogClose>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
                 <Button
                     type="button"
                     size="sm"
                     className="h-12 w-24 rounded-md text-xs tracking-widest uppercase transition-transform"
-                    onClick={onSubmit}
+                    onClick={() => onSubmit()}
                     disabled={loading || isInputEmpty}
                 >
                     Send <CornerDownLeft className="size-4" />

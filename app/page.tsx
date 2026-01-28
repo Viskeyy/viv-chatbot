@@ -3,7 +3,6 @@
 import { ChatHeader } from '@/components/ChatHeader'
 import { ChatInput } from '@/components/ChatInput'
 import { ChatMessages, type ChatMessage } from '@/components/ChatMessages'
-
 import { randomId } from '@/lib/randomId'
 import { applyStreamChunk } from '@/lib/streamChunk'
 import Viv from '@yomo/viv'
@@ -119,6 +118,8 @@ export default function Home() {
                     loading={loading}
                     onValueChange={setInputValue}
                     onSubmit={handleStreamRequest}
+                    onClear={() => setTotalMessages([])}
+                    isDisabledClear={totalMessages.length === 0}
                 />
             </div>
         </main>
