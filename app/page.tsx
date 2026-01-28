@@ -3,40 +3,36 @@
 import { ChatHeader } from '@/components/ChatHeader'
 import { ChatInput } from '@/components/ChatInput'
 import { ChatMessages, type ChatMessage } from '@/components/ChatMessages'
+
 import { randomId } from '@/lib/randomId'
 import { applyStreamChunk } from '@/lib/streamChunk'
-import { useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useState } from 'react'
-import { toast } from 'sonner'
+import Viv from '@yomo/viv'
 
-function ChatContent() {
-    const searchParams = useSearchParams()
+import { useEffect, useRef, useState } from 'react'
+
+export default function Home() {
+    const vivRef = useRef<Viv | null>(null)
+
     const [loading, setLoading] = useState(false)
     const [inputValue, setInputValue] = useState('')
     const [totalMessages, setTotalMessages] = useState<ChatMessage[]>([])
-    const [encryptedKey, setEncryptedKey] = useState<string | null>(null)
 
     useEffect(() => {
-        const encrypteKeyParam = searchParams.get('apiKey')
-        if (encrypteKeyParam) {
-            const decoded = decodeURIComponent(encrypteKeyParam)
-            setEncryptedKey(decoded)
-        } else {
-            toast.error('API key not found', { position: 'top-center' })
-        }
-    }, [searchParams])
+        if (vivRef.current) return
+        vivRef.current = new Viv({
+            apiKey: process.env.NEXT_PUBLIC_VIVGRID_API_KEY!,
+            baseURL: '/api',
+        })
+    }, [])
 
     const handleStreamRequest = async (overrideContent?: string) => {
-        const content = typeof overrideContent === 'string' ? overrideContent : undefined
-        const trimmedInput = (content ?? inputValue).trim()
-
-        if (!trimmedInput) {
-            toast.error('Please enter a message', { position: 'top-center' })
-            return
-        }
+        if (!vivRef.current) return
+        const input = overrideContent ?? inputValue
+        const trimmedInput = input.trim()
+        if (!trimmedInput) return
 
         setLoading(true)
-        if (!content) setInputValue('')
+        if (!overrideContent) setInputValue('')
 
         const userMessage: ChatMessage = {
             id: randomId(),
@@ -52,39 +48,17 @@ function ChatContent() {
         }
 
         const payload = [
-            ...totalMessages.slice(-7).map(({ role, content }) => ({ role, content })),
+            ...(totalMessages.slice(-7).map(({ role, content }) => ({ role, content })) as Array<{
+                role: 'user' | 'assistant'
+                content: string
+            }>),
             { role: 'user' as const, content: trimmedInput },
         ]
 
         setTotalMessages((prev) => [...prev, userMessage, assistantPlaceholder])
 
         try {
-            const requestBody: {
-                messages: Array<{ role: 'user' | 'assistant'; content: string }>
-                encryptedKey?: string
-            } = {
-                messages: payload,
-            }
-            if (encryptedKey) requestBody.encryptedKey = encryptedKey
-
-            const response = await fetch('/api/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody),
-            })
-
-            if (!response.ok) {
-                const errorText = await response.text()
-                const errorMessage =
-                    JSON.parse(errorText)?.error || errorText || `HTTP error! status: ${response.status}`
-                toast.error(errorMessage, { position: 'top-center' })
-                throw new Error(errorMessage)
-            }
-
-            const reader = response.body?.getReader()
-            if (!reader) throw new Error('No reader available')
+            const res = await vivRef.current.chat.completions.stream({ messages: payload })
 
             const streamState = {
                 contentBlock: [],
@@ -93,35 +67,15 @@ function ChatContent() {
                 usageBlock: null,
             }
 
-            const decoder = new TextDecoder()
-            let buffer = ''
+            for await (const chunk of res) {
+                applyStreamChunk(chunk, streamState)
 
-            while (true) {
-                const { done, value } = await reader.read()
-                if (done) break
+                const toolsHtml = streamState.toolsBlock.length > 2 ? streamState.toolsBlock.join('') : ''
+                const orderedBlocks = [toolsHtml, ...streamState.contentBlock].filter(Boolean).join('')
 
-                buffer += decoder.decode(value, { stream: true })
-                const lines = buffer.split('\n')
-                buffer = lines.pop() || ''
-
-                for (const line of lines) {
-                    if (!line.trim()) continue
-                    try {
-                        const chunk = JSON.parse(line)
-                        applyStreamChunk(chunk, streamState)
-
-                        const toolsHtml = streamState.toolsBlock.length > 2 ? streamState.toolsBlock.join('') : ''
-                        const orderedBlocks = [toolsHtml, ...streamState.contentBlock].filter(Boolean).join('')
-
-                        setTotalMessages((prev) =>
-                            prev.map((msg) =>
-                                msg.id === assistantMessageId ? { ...msg, content: orderedBlocks } : msg,
-                            ),
-                        )
-                    } catch (e) {
-                        console.error('Error parsing chunk:', e, line)
-                    }
-                }
+                setTotalMessages((prev) =>
+                    prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, content: orderedBlocks } : msg)),
+                )
             }
 
             const toolsHtml = streamState.toolsBlock.length > 2 ? streamState.toolsBlock.join('') : ''
@@ -139,7 +93,7 @@ function ChatContent() {
             )
         } catch (error) {
             setTotalMessages((prev) => [
-                ...prev.filter((msg) => msg.id !== assistantMessageId),
+                ...prev,
                 {
                     id: randomId(),
                     content: `Error: ${error instanceof Error ? error.message : 'Failed to get response'}`,
@@ -152,7 +106,7 @@ function ChatContent() {
     }
 
     return (
-        <main className="text-foreground flex h-screen w-screen bg-[#fafafa] p-8">
+        <main className="text-foreground flex h-screen w-screen bg-[#fafafa] p-4">
             <div className="flex w-full flex-col gap-4">
                 <ChatHeader />
 
@@ -168,25 +122,5 @@ function ChatContent() {
                 />
             </div>
         </main>
-    )
-}
-
-function LoadingFallback() {
-    return (
-        <main className="text-foreground flex h-screen w-screen bg-[#fafafa] p-8">
-            <div className="flex w-full flex-col gap-4">
-                <ChatHeader />
-                <hr />
-                <div className="flex items-center justify-center">Loading...</div>
-            </div>
-        </main>
-    )
-}
-
-export default function Home() {
-    return (
-        <Suspense fallback={<LoadingFallback />}>
-            <ChatContent />
-        </Suspense>
     )
 }

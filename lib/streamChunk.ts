@@ -18,6 +18,8 @@ type UsagePayload = {
     completion_tokens?: number
 }
 
+const formatTokens = (value?: number) => (typeof value === 'number' ? value.toLocaleString('en-US') : '-')
+
 export const applyStreamChunk = (chunk: StreamChunk, state: StreamState) => {
     switch (chunk.type) {
         case 'model':
@@ -27,7 +29,7 @@ export const applyStreamChunk = (chunk: StreamChunk, state: StreamState) => {
             const { total_tokens, prompt_tokens, completion_tokens } = chunk.data as UsagePayload
             state.usageBlock =
                 '📊 Token Usage · ' +
-                `Total ${total_tokens ?? '-'} | Prompt ${prompt_tokens ?? '-'} | Completion ${completion_tokens ?? '-'}`
+                `Total ${formatTokens(total_tokens)} | Prompt ${formatTokens(prompt_tokens)} | Completion ${formatTokens(completion_tokens)}`
             break
         }
         case 'functionCall': {

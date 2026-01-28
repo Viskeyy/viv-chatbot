@@ -1,10 +1,11 @@
 import { Button } from '@/components/ui/button'
 import { Github } from 'lucide-react'
+import Image from 'next/image'
 
 export const ChatHeader = () => {
     return (
         <div className="flex w-full items-center justify-between">
-            <h1 className="text-xl tracking-widest uppercase">Viv Chatbot</h1>
+            <Image src="/home_icon.png" alt="Viv Chatbot" width={32} height={32} />
             <Button
                 variant="outline"
                 size="icon"
