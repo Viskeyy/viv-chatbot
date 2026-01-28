@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { InputGroup, InputGroupAddon } from '@/components/ui/input-group'
 import { Textarea } from '@/components/ui/textarea'
-import { CornerDownLeft, X } from 'lucide-react'
+import { CornerDownLeft } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 
 type ChatInputProps = {
@@ -64,12 +64,11 @@ export const ChatInput = ({ value, loading, onValueChange, onSubmit, onClear, is
                     <DialogTrigger asChild>
                         <Button
                             type="button"
-                            size="sm"
-                            className="h-12 w-24 rounded-md text-xs tracking-widest uppercase transition-transform"
+                            className="h-auto rounded-md py-0 text-xs tracking-widest uppercase transition-transform hover:cursor-pointer hover:no-underline"
                             disabled={loading || isDisabledClear}
-                            variant="ghost"
+                            variant="link"
                         >
-                            clear <X className="size-4" />
+                            clear
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-100">
