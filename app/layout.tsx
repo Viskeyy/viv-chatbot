@@ -18,6 +18,12 @@ export const metadata: Metadata = {
     description:
         'A quick preview for AI Agents based on Vivgrid, and can visualize the tool invocation and token usage',
     icons: { icon: '/favicon.png' },
+    openGraph: {
+        title: 'VivChat',
+        description:
+            'A quick preview for AI Agents based on Vivgrid, and can visualize the tool invocation and token usage',
+        images: [{ url: '/favicon.png' }],
+    },
 }
 
 export default function RootLayout({
