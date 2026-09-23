@@ -59,7 +59,7 @@ export const ChatInput = ({ value, loading, onValueChange, onSubmit, onClear, is
                 }}
                 disabled={loading}
             />
-            <InputGroupAddon align="inline-end">
+            <InputGroupAddon align="inline-end" className="items-end">
                 <Dialog>
                     <DialogTrigger asChild>
                         <Button
